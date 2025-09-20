@@ -61,4 +61,6 @@ fn install_arch_packages(manager: &str, packages: &[Package], locked: bool, dry_
 
         panic!("Error running pacman install");
     }
+
+    println!("great success");
 }
