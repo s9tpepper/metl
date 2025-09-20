@@ -49,8 +49,7 @@ fn install_dotfiles(symlink: bool) {
     };
 
     dotfiles_dir
-        .filter(|entry| entry.is_ok())
-        .map(|entry| entry.unwrap())
+        .flatten()
         .filter(|entry| entry.path().is_dir())
         .for_each(|entry| match symlink {
             true => symlink_config(entry),
