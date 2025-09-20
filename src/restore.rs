@@ -103,7 +103,10 @@ fn copy_config(_entry: DirEntry) {
 // TODO: handle dry_run bool
 fn clone_dotfiles(repo: &str, dry_run: bool) -> Result<(), RestoreError> {
     let mut clone_command = Command::new("git");
-    clone_command.arg("clone").arg(repo).arg("~/dotfiles");
+
+    let dotfiles_path = get_home_path().join("dotfiles");
+
+    clone_command.arg("clone").arg(repo).arg(dotfiles_path);
     let Ok(cmd_result) = clone_command.output() else {
         // TODO: FIgure out how to message this
 
