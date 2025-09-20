@@ -74,6 +74,10 @@ fn check_binary_availability(binary_name: &str) -> bool {
 }
 
 fn symlink_config(entry: DirEntry) {
+    if entry.file_name().into_string().expect("").starts_with(".") {
+        return;
+    }
+
     if !check_binary_availability("stow") {
         panic!("stow is required to symlink dotfiles");
     }
