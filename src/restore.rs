@@ -91,11 +91,19 @@ fn symlink_config(entry: DirEntry) {
         panic!("stow was unable to install {:?}", entry.file_name());
     };
 
+    if let Ok(stdout) = String::from_utf8(symlink_result.stdout) {
+        println!("{stdout:?}");
+    }
+
+    if let Ok(stderr) = String::from_utf8(symlink_result.stderr) {
+        println!("{stderr:?}");
+    }
+
     let Some(status_code) = symlink_result.status.code() else {
         panic!("stow was unable to install {:?}", entry.file_name());
     };
 
-    if !status_code != 0 {
+    if status_code != 0 {
         panic!("stow was unable to install {:?}", entry.file_name());
     }
 }
