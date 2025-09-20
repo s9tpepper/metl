@@ -6,17 +6,21 @@ use serde::{Deserialize, Serialize};
 #[derive(Default, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Config {
     pub locked_versions: bool,
-    // pub dotfiles_path: String,
-    // pub dotfiles_symlink: bool,
     pub package_managers: Vec<String>,
+    pub dotfiles_repo: Option<String>,
+    pub dotfiles_symlink: Option<bool>,
 }
 
-pub fn get_config_path() -> PathBuf {
+pub fn get_home_path() -> PathBuf {
     let Some(user_dirs) = UserDirs::new() else {
         panic!("Can not find user directory while loading metl config.");
     };
 
-    let home_dir = user_dirs.home_dir();
+    user_dirs.home_dir().to_path_buf()
+}
+
+pub fn get_config_path() -> PathBuf {
+    let home_dir = get_home_path();
 
     home_dir.join(".config")
 }
@@ -36,6 +40,8 @@ fn test_load_config() {
     let toml = r#"
 package_managers = ["pacman", "yay"]
 locked_versions = true
+dotfiles_repo = "repo_url"
+dotfiles_symlink = true
 "#;
 
     let Ok(config) = toml::from_str::<Config>(toml) else {
@@ -47,6 +53,8 @@ locked_versions = true
         Config {
             package_managers: vec!["pacman".into(), "yay".into()],
             locked_versions: true,
+            dotfiles_repo: Some("repo_url".into()),
+            dotfiles_symlink: Some(true),
         }
     );
 }

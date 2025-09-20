@@ -8,6 +8,8 @@ use crate::config::get_config_path;
 pub struct Manifest {
     pub managers: Vec<PackageManager>,
     pub locked_versions: bool,
+    pub dotfiles_repo: Option<String>,
+    pub dotfiles_symlink: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

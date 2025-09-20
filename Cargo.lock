@@ -212,6 +212,7 @@ dependencies = [
  "directories",
  "serde",
  "serde_json",
+ "thiserror",
  "toml",
  "toml_edit",
 ]

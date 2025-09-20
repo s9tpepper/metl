@@ -16,11 +16,13 @@ pub fn generate() {
     let Config {
         package_managers,
         locked_versions,
+        dotfiles_repo,
     } = config;
 
     let mut manifest = Manifest {
         managers: vec![],
         locked_versions,
+        dotfiles_repo,
     };
 
     package_managers
