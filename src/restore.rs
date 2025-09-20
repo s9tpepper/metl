@@ -48,6 +48,12 @@ fn install_arch_packages(manager: &str, packages: &[Package], locked: bool, dry_
     };
 
     if !command_result.status.success() {
+        let stdout = String::from_utf8(command_result.stdout);
+        let stderr = String::from_utf8(command_result.stderr);
+
+        println!("{stdout:?}");
+        println!("{stderr:?}");
+
         panic!("Error running pacman install");
     }
 }
