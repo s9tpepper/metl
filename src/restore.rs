@@ -82,7 +82,10 @@ fn symlink_config(entry: DirEntry) {
         panic!("stow is required to symlink dotfiles");
     }
 
+    let dotfiles_path = get_home_path().join("dotfiles");
+
     let mut symlink_command = Command::new("stow");
+    symlink_command.current_dir(dotfiles_path);
     symlink_command.arg("-S");
     symlink_command.arg(entry.file_name());
 
