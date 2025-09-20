@@ -17,12 +17,14 @@ pub fn generate() {
         package_managers,
         locked_versions,
         dotfiles_repo,
+        dotfiles_symlink,
     } = config;
 
     let mut manifest = Manifest {
         managers: vec![],
         locked_versions,
         dotfiles_repo,
+        dotfiles_symlink,
     };
 
     package_managers
