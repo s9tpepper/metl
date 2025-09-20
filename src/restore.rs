@@ -40,7 +40,10 @@ fn install_arch_packages(manager: &str, packages: &[Package], locked: bool, dry_
 
     let mut command = Command::new(manager);
     command.arg("-S");
-    command.arg(package_list.join(" ").trim());
+
+    package_list.iter().for_each(|p| {
+        command.arg(p);
+    });
 
     command.stdout(Stdio::piped());
     let Ok(command_result) = command.output() else {
