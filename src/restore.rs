@@ -41,7 +41,7 @@ fn install_arch_packages(manager: &str, packages: &[Package], locked: bool, dry_
     let mut command = Command::new(manager);
     command.arg("-S");
     command.arg("--needed");
-    command.arg("--no-confirm");
+    command.arg("--noconfirm");
 
     package_list.iter().for_each(|p| {
         command.arg(p);
