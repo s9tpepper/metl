@@ -69,3 +69,12 @@ pub fn dotfiles_copied_successfully(name: OsString, to: PathBuf, output: Output,
         }
     }
 }
+
+pub fn pacman_dry_run_header() {
+    println!(
+        "{} {} {}",
+        &*SUCCESS,
+        "DRY RUN".yellow(),
+        "pacman:".white().bold(),
+    );
+}

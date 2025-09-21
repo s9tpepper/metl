@@ -1,5 +1,6 @@
 use std::{
     fs::{self, DirEntry},
+    io::Write,
     path::PathBuf,
     process::{Command, Output, Stdio},
 };
@@ -17,7 +18,8 @@ use crate::{
         load_manifest,
     },
     successes::{
-        dotfiles_copied_successfully, dry_run_dotfiles_clone, package_sync_success, stow_success,
+        dotfiles_copied_successfully, dry_run_dotfiles_clone, package_sync_success,
+        pacman_dry_run_header, stow_success,
     },
     warnings::{
         dotfiles_copy_failed, dotfiles_repo_not_set, warn_dotfiles_symlink_failed,
@@ -307,8 +309,8 @@ fn install_arch_packages(
     };
 
     if verbose {
-        let stdout = String::from_utf8(command_result.stdout);
-        println!("{stdout:?}");
+        pacman_dry_run_header();
+        let _ = std::io::stdout().write_all(&command_result.stdout);
     }
 
     if !command_result.status.success() {
@@ -320,5 +322,7 @@ fn install_arch_packages(
         pacman_unknown_error();
     }
 
-    package_sync_success(manager, &package_list);
+    if !dry_run {
+        package_sync_success(manager, &package_list);
+    }
 }
