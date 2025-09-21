@@ -1,4 +1,4 @@
-use std::{ffi::OsString, path::PathBuf, sync::LazyLock};
+use std::{ffi::OsString, path::PathBuf, process::Output, sync::LazyLock};
 
 use colored::{ColoredString, Colorize};
 
@@ -55,4 +55,28 @@ pub fn stow_success(name: OsString) {
         "stow symlinked".white(),
         name.to_string_lossy().white().bold(),
     );
+}
+
+pub fn dotfiles_copied_successfully(name: OsString, to: PathBuf, output: Output, verbose: bool) {
+    println!(
+        "{} {} {} {}",
+        &*SUCCESS,
+        name.to_string_lossy().white().bold(),
+        "copied successfully to".white(),
+        to.to_string_lossy().white().bold(),
+    );
+
+    if verbose {
+        if let Ok(stdout) = String::from_utf8(output.stdout)
+            && !stdout.trim().is_empty()
+        {
+            println!("{stdout}");
+        }
+
+        if let Ok(stderr) = String::from_utf8(output.stderr)
+            && !stderr.trim().is_empty()
+        {
+            println!("{stderr}");
+        }
+    }
 }

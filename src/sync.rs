@@ -1,6 +1,9 @@
 use std::{
+    env::home_dir,
+    ffi::OsString,
     fs::{self, DirEntry},
-    process::{Command, Stdio},
+    path::PathBuf,
+    process::{Command, Output, Stdio},
 };
 
 use thiserror::Error;
@@ -16,11 +19,13 @@ use crate::{
         load_manifest,
     },
     successes::{
-        dry_run_dotfiles_clone, dry_run_package_install_output, package_sync_success, stow_success,
+        dotfiles_copied_successfully, dry_run_dotfiles_clone, dry_run_package_install_output,
+        package_sync_success, stow_success,
     },
     warnings::{
-        dotfiles_repo_not_set, warn_dotfiles_symlink_failed, warn_dotfiles_symlink_non_zero,
-        warn_dotfiles_symlink_signal_exit,
+        dotfiles_copy_failed, dotfiles_repo_not_set, warn_dotfiles_copy_cant_verify_non_collision,
+        warn_dotfiles_destination_exists, warn_dotfiles_symlink_failed,
+        warn_dotfiles_symlink_non_zero, warn_dotfiles_symlink_signal_exit,
     },
 };
 
@@ -140,8 +145,69 @@ fn symlink_config(entry: DirEntry, verbose: bool) {
     stow_success(entry.file_name());
 }
 
-fn copy_config(_entry: DirEntry, verbose: bool) {
-    unimplemented!();
+fn copy_config(entry: DirEntry, verbose: bool) {
+    let home_dir = get_home_path();
+    let dotfiles_path = home_dir.join("dotfiles");
+
+    let parent_folder = dotfiles_path.join(entry.file_name());
+
+    if let Some(file_name) = parent_folder.file_name()
+        && file_name.to_str() == Some(".git")
+    {
+        return;
+    }
+
+    match fs::read_dir(&parent_folder) {
+        Ok(children) => {
+            children.for_each(|child_dir| {
+                if let Ok(dir_entry) = child_dir
+                    && dir_entry.file_name().to_str() != Some(".git")
+                {
+                    let source_path = dir_entry.path();
+                    let dest_path = home_dir.join(dir_entry.file_name());
+
+                    let log_files_path = format!(
+                        "{:?}/{:?}",
+                        parent_folder.file_name().unwrap(),
+                        dir_entry.file_name()
+                    )
+                    .replace("\"", "");
+
+                    match run_rsync(&source_path, &dest_path, verbose) {
+                        Ok(output) => dotfiles_copied_successfully(
+                            log_files_path.into(),
+                            dest_path,
+                            output,
+                            verbose,
+                        ),
+
+                        Err(error) => dotfiles_copy_failed(dir_entry.file_name(), dest_path, error),
+                    }
+                }
+            });
+        }
+
+        // TODO: Add error output for this one
+        Err(_) => todo!(),
+    }
+}
+
+fn run_rsync(source: &PathBuf, dest: &PathBuf, verbose: bool) -> Result<Output, std::io::Error> {
+    let mut command = Command::new("rsync");
+    command.current_dir(source);
+    command.arg("--ignore-existing");
+    command.arg("-a");
+    command.arg("--atimes");
+    // command.arg("--dry-run");
+
+    if verbose {
+        command.arg("-v");
+    }
+
+    command.arg("./");
+    command.arg(dest);
+
+    command.output()
 }
 
 fn clone_dotfiles(repo: &str, dry_run: bool, verbose: bool) -> Result<(), RestoreError> {
