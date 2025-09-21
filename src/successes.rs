@@ -78,3 +78,12 @@ pub fn pacman_dry_run_header() {
         "pacman:".white().bold(),
     );
 }
+
+pub fn install_successful(installed: &str) {
+    println!(
+        "{} {} {}",
+        &*SUCCESS,
+        "Installed:".white().dimmed(),
+        installed.white().bold(),
+    );
+}

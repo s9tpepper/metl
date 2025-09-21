@@ -110,3 +110,23 @@ pub fn dotfiles_dir_read_error(dotfiles_path: PathBuf, error: std::io::Error, ve
         );
     }
 }
+
+pub fn package_install_failed(package: &str, error: std::io::Error) -> ! {
+    panic!(
+        "{} {} {}\n{}",
+        &*ERROR,
+        package.white().bold(),
+        "failed to install:".white().dimmed(),
+        error.to_string().cyan().bold(),
+    );
+}
+
+pub fn install_failed(installed: &str, code: i32) {
+    println!(
+        "{} {} {}, code: {}",
+        &*ERROR,
+        "failed to install:".white().dimmed(),
+        installed.white().bold(),
+        code.to_string().cyan().bold(),
+    );
+}
