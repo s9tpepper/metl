@@ -3,9 +3,11 @@ use clap::{Parser, Subcommand};
 use crate::{generate::generate, restore::restore};
 
 mod config;
+mod errors;
 mod generate;
 mod manifest;
 mod restore;
+mod warnings;
 
 /// Does all the things for a new system.
 #[derive(Subcommand)]
