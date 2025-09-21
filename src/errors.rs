@@ -130,3 +130,13 @@ pub fn install_failed(installed: &str, code: i32) {
         code.to_string().cyan().bold(),
     );
 }
+
+pub fn remove_failed(installed: &str, code: i32) {
+    println!(
+        "{} {} {}, code: {}",
+        &*ERROR,
+        "failed to remove:".white().dimmed(),
+        installed.white().bold(),
+        code.to_string().cyan().bold(),
+    );
+}

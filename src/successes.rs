@@ -87,3 +87,12 @@ pub fn install_successful(installed: &str) {
         installed.white().bold(),
     );
 }
+
+pub fn remove_successful(installed: &str) {
+    println!(
+        "{} {} {}",
+        &*SUCCESS,
+        "Removed:".white().dimmed(),
+        installed.white().bold(),
+    );
+}
