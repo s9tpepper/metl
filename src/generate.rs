@@ -10,6 +10,7 @@ use crate::{
         unsupported_package_manager,
     },
     manifest::{Manifest, Package, PackageManager},
+    successes::packages_retrieved_successfully,
     warnings::warn_package_output,
 };
 
@@ -115,5 +116,7 @@ fn get_arch_packages(manager: &str, manifest: &mut Manifest, locked_versions: bo
         },
 
         _ => unsupported_package_manager(manager),
-    })
+    });
+
+    packages_retrieved_successfully(manager);
 }

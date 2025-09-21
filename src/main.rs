@@ -7,6 +7,7 @@ mod errors;
 mod generate;
 mod manifest;
 mod restore;
+mod successes;
 mod warnings;
 
 /// Does all the things for a new system.
