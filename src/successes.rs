@@ -1,4 +1,4 @@
-use std::sync::LazyLock;
+use std::{ffi::OsString, path::PathBuf, sync::LazyLock};
 
 use colored::{ColoredString, Colorize};
 
@@ -31,5 +31,28 @@ pub fn package_sync_success(manager: &str, packages: &[String]) {
         manager.white().bold(),
         "-S --needed --noconfirm".white(),
         packages.join(" ").white().dimmed()
+    );
+}
+
+pub fn dry_run_dotfiles_clone(repo: &str, dotfiles_path: PathBuf) {
+    println!(
+        "{} {} {} {} {}",
+        &*SUCCESS,
+        "DRY RUN:".yellow(),
+        "git clone".white(),
+        repo.truecolor(255, 255, 255).bold(),
+        dotfiles_path
+            .to_string_lossy()
+            .truecolor(255, 255, 255)
+            .bold()
+    );
+}
+
+pub fn stow_success(name: OsString) {
+    println!(
+        "{} {} {}",
+        &*SUCCESS,
+        "stow symlinked".white(),
+        name.to_string_lossy().white().bold(),
     );
 }

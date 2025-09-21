@@ -7,14 +7,21 @@ use thiserror::Error;
 
 use crate::{
     config::get_home_path,
-    errors::{pacman_install_error, pacman_unknown_error},
+    errors::{
+        dotfiles_clone_error, dotfiles_dir_read_error, pacman_install_error, pacman_unknown_error,
+    },
     manifest::{
         Manifest, Package,
         PackageManager::{Pacman, Yay},
         load_manifest,
     },
-    successes::{dry_run_package_install_output, package_sync_success},
-    warnings::dotfiles_repo_not_set,
+    successes::{
+        dry_run_dotfiles_clone, dry_run_package_install_output, package_sync_success, stow_success,
+    },
+    warnings::{
+        dotfiles_repo_not_set, warn_dotfiles_symlink_failed, warn_dotfiles_symlink_non_zero,
+        warn_dotfiles_symlink_signal_exit,
+    },
 };
 
 #[derive(Debug, Error)]
@@ -38,9 +45,9 @@ fn restore_dotfiles(manifest: &Manifest, dry_run: bool, verbose: bool) {
 
     let symlink = manifest.dotfiles_symlink.unwrap_or(false);
 
-    match clone_dotfiles(repo, dry_run) {
+    match clone_dotfiles(repo, dry_run, verbose) {
         Ok(_) => install_dotfiles(symlink, verbose),
-        Err(error) => println!("{error}"),
+        Err(error) => dotfiles_clone_error(error, verbose),
     }
 }
 
@@ -48,8 +55,9 @@ fn install_dotfiles(symlink: bool, verbose: bool) {
     let home_path = get_home_path();
     let dotfiles_path = home_path.join("dotfiles");
 
-    let Ok(dotfiles_dir) = fs::read_dir(dotfiles_path) else {
-        panic!("Error reading the dotfiles directory");
+    let dotfiles_dir = match fs::read_dir(&dotfiles_path) {
+        Ok(dir) => dir,
+        Err(error) => dotfiles_dir_read_error(dotfiles_path, error, verbose),
     };
 
     dotfiles_dir
@@ -81,6 +89,7 @@ fn symlink_config(entry: DirEntry, verbose: bool) {
         return;
     }
 
+    // TODO: Move this to an earlier spot to check all deps up front
     if !check_binary_availability("stow") {
         panic!("stow is required to symlink dotfiles");
     }
@@ -92,50 +101,69 @@ fn symlink_config(entry: DirEntry, verbose: bool) {
     symlink_command.arg("-S");
     symlink_command.arg(entry.file_name());
 
-    // TODO: Update errors so they're unique per scenario
-    let Ok(symlink_result) = symlink_command.output() else {
-        panic!("stow was unable to install {:?}", entry.file_name());
+    let symlink_result = match symlink_command.output() {
+        Ok(result) => result,
+        Err(error) => {
+            warn_dotfiles_symlink_failed(entry.file_name(), error);
+
+            return;
+        }
     };
 
-    if let Ok(stdout) = String::from_utf8(symlink_result.stdout) {
-        println!("{stdout:?}");
+    if verbose
+        && let Ok(stdout) = String::from_utf8(symlink_result.stdout)
+        && !stdout.is_empty()
+    {
+        println!("stdout {stdout:?}");
     }
 
-    if let Ok(stderr) = String::from_utf8(symlink_result.stderr) {
-        println!("{stderr:?}");
+    if verbose
+        && let Ok(stderr) = String::from_utf8(symlink_result.stderr)
+        && !stderr.is_empty()
+    {
+        println!("stderr {stderr:?}");
     }
 
-    let Some(status_code) = symlink_result.status.code() else {
-        panic!("stow was unable to install {:?}", entry.file_name());
+    let status_code = match symlink_result.status.code() {
+        Some(code) => code,
+        None => {
+            warn_dotfiles_symlink_signal_exit(entry.file_name());
+            return;
+        }
     };
 
     if status_code != 0 {
-        panic!("stow was unable to install {:?}", entry.file_name());
+        warn_dotfiles_symlink_non_zero(entry.file_name(), status_code);
+        return;
     }
+
+    stow_success(entry.file_name());
 }
 
 fn copy_config(_entry: DirEntry, verbose: bool) {
     unimplemented!();
 }
 
-// TODO: handle dry_run bool
-fn clone_dotfiles(repo: &str, dry_run: bool) -> Result<(), RestoreError> {
-    let mut clone_command = Command::new("git");
-
+fn clone_dotfiles(repo: &str, dry_run: bool, verbose: bool) -> Result<(), RestoreError> {
     let dotfiles_path = get_home_path().join("dotfiles");
 
-    clone_command.arg("clone").arg(repo).arg(dotfiles_path);
-    let Ok(cmd_result) = clone_command.output() else {
-        // TODO: FIgure out how to message this
+    if dry_run {
+        dry_run_dotfiles_clone(repo, dotfiles_path);
+        return Ok(());
+    }
 
+    let mut clone_command = Command::new("git");
+    clone_command.arg("clone").arg(repo).arg(dotfiles_path);
+
+    let Ok(cmd_result) = clone_command.output() else {
         return Err(RestoreError::DotfileClone);
     };
 
-    if let Ok(stdout) = String::from_utf8(cmd_result.stdout) {
+    if verbose && let Ok(stdout) = String::from_utf8(cmd_result.stdout) {
         println!("{stdout}");
     }
 
-    if let Ok(stderr) = String::from_utf8(cmd_result.stderr) {
+    if verbose && let Ok(stderr) = String::from_utf8(cmd_result.stderr) {
         println!("{stderr}");
     }
 

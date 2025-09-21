@@ -3,6 +3,8 @@ use std::{io::Error, path::PathBuf, sync::LazyLock};
 
 use colored::{ColoredString, Colorize};
 
+use crate::sync::RestoreError;
+
 static ERROR: LazyLock<ColoredString> = LazyLock::new(|| "[ERROR]".red().bold());
 
 pub fn unsupported_package_manager(package_manager: &str) -> ! {
@@ -71,4 +73,40 @@ pub fn pacman_install_error(error: std::io::Error) -> ! {
 
 pub fn pacman_unknown_error() -> ! {
     panic!("{} {}", &*ERROR, "'pacman -S ...' failed".white().dimmed(),);
+}
+
+pub fn dotfiles_clone_error(error: RestoreError, verbose: bool) -> ! {
+    if verbose {
+        panic!(
+            "{} {}\n{}",
+            &*ERROR,
+            "dotfiles could not be cloned".white().dimmed(),
+            error.to_string().white().bold()
+        )
+    } else {
+        panic!(
+            "{} {}",
+            &*ERROR,
+            "dotfiles could not be cloned".white().dimmed()
+        )
+    }
+}
+
+pub fn dotfiles_dir_read_error(dotfiles_path: PathBuf, error: std::io::Error, verbose: bool) -> ! {
+    if verbose {
+        panic!(
+            "{} {} {}\n{}",
+            &*ERROR,
+            "dotfiles path could not be read:".white().dimmed(),
+            dotfiles_path.to_string_lossy().white().bold(),
+            error.to_string().cyan().bold(),
+        );
+    } else {
+        panic!(
+            "{} {} {}",
+            &*ERROR,
+            "dotfiles path could not be read:".white().dimmed(),
+            dotfiles_path.to_string_lossy().white().bold(),
+        );
+    }
 }

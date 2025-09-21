@@ -1,4 +1,4 @@
-use std::sync::LazyLock;
+use std::{ffi::OsString, sync::LazyLock};
 
 use colored::{ColoredString, Colorize};
 
@@ -18,5 +18,36 @@ pub fn dotfiles_repo_not_set() {
         "{} {}",
         &*WARNING,
         "dotfiles repo has not been configured".white().dimmed(),
+    );
+}
+
+pub fn warn_dotfiles_symlink_failed(name: OsString, error: std::io::Error) {
+    println!(
+        "{} {} {}\n{}",
+        &*WARNING,
+        name.to_string_lossy().white().bold(),
+        "could not be stowed".white().dimmed(),
+        error.to_string().cyan().bold(),
+    );
+}
+
+pub fn warn_dotfiles_symlink_signal_exit(name: OsString) {
+    println!(
+        "{} {} {}",
+        &*WARNING,
+        name.to_string_lossy().white().bold(),
+        "could not be stowed, exited because of signal"
+            .white()
+            .dimmed(),
+    );
+}
+
+pub fn warn_dotfiles_symlink_non_zero(name: OsString, code: i32) {
+    println!(
+        "{} {} {} {}",
+        &*WARNING,
+        name.to_string_lossy().white().bold(),
+        "could not be stowed, exit code:".white().dimmed(),
+        code.to_string().white().bold()
     );
 }
