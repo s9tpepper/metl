@@ -1,6 +1,4 @@
 use std::{
-    env::home_dir,
-    ffi::OsString,
     fs::{self, DirEntry},
     path::PathBuf,
     process::{Command, Output, Stdio},
@@ -19,12 +17,10 @@ use crate::{
         load_manifest,
     },
     successes::{
-        dotfiles_copied_successfully, dry_run_dotfiles_clone, dry_run_package_install_output,
-        package_sync_success, stow_success,
+        dotfiles_copied_successfully, dry_run_dotfiles_clone, package_sync_success, stow_success,
     },
     warnings::{
-        dotfiles_copy_failed, dotfiles_repo_not_set, warn_dotfiles_copy_cant_verify_non_collision,
-        warn_dotfiles_destination_exists, warn_dotfiles_symlink_failed,
+        dotfiles_copy_failed, dotfiles_repo_not_set, warn_dotfiles_symlink_failed,
         warn_dotfiles_symlink_non_zero, warn_dotfiles_symlink_signal_exit,
     },
 };
@@ -51,12 +47,12 @@ fn restore_dotfiles(manifest: &Manifest, dry_run: bool, verbose: bool) {
     let symlink = manifest.dotfiles_symlink.unwrap_or(false);
 
     match clone_dotfiles(repo, dry_run, verbose) {
-        Ok(_) => install_dotfiles(symlink, verbose),
+        Ok(_) => install_dotfiles(symlink, verbose, dry_run),
         Err(error) => dotfiles_clone_error(error, verbose),
     }
 }
 
-fn install_dotfiles(symlink: bool, verbose: bool) {
+fn install_dotfiles(symlink: bool, verbose: bool, dry_run: bool) {
     let home_path = get_home_path();
     let dotfiles_path = home_path.join("dotfiles");
 
@@ -69,8 +65,8 @@ fn install_dotfiles(symlink: bool, verbose: bool) {
         .flatten()
         .filter(|entry| entry.path().is_dir())
         .for_each(|entry| match symlink {
-            true => symlink_config(entry, verbose),
-            false => copy_config(entry, verbose),
+            true => symlink_config(entry, verbose, dry_run),
+            false => copy_config(entry, verbose, dry_run),
         });
 }
 
@@ -89,7 +85,7 @@ fn check_binary_availability(binary_name: &str) -> bool {
     status_code == 0
 }
 
-fn symlink_config(entry: DirEntry, verbose: bool) {
+fn symlink_config(entry: DirEntry, verbose: bool, dry_run: bool) {
     if entry.file_name().into_string().expect("").starts_with(".") {
         return;
     }
@@ -105,6 +101,14 @@ fn symlink_config(entry: DirEntry, verbose: bool) {
     symlink_command.current_dir(dotfiles_path);
     symlink_command.arg("-S");
     symlink_command.arg(entry.file_name());
+
+    if dry_run {
+        symlink_command.arg("--simulate");
+    }
+
+    if verbose {
+        symlink_command.arg("--verbose");
+    }
 
     let symlink_result = match symlink_command.output() {
         Ok(result) => result,
@@ -145,7 +149,7 @@ fn symlink_config(entry: DirEntry, verbose: bool) {
     stow_success(entry.file_name());
 }
 
-fn copy_config(entry: DirEntry, verbose: bool) {
+fn copy_config(entry: DirEntry, verbose: bool, dry_run: bool) {
     let home_dir = get_home_path();
     let dotfiles_path = home_dir.join("dotfiles");
 
@@ -173,7 +177,7 @@ fn copy_config(entry: DirEntry, verbose: bool) {
                     )
                     .replace("\"", "");
 
-                    match run_rsync(&source_path, &dest_path, verbose) {
+                    match run_rsync(&source_path, &dest_path, verbose, dry_run) {
                         Ok(output) => dotfiles_copied_successfully(
                             log_files_path.into(),
                             dest_path,
@@ -187,18 +191,25 @@ fn copy_config(entry: DirEntry, verbose: bool) {
             });
         }
 
-        // TODO: Add error output for this one
-        Err(_) => todo!(),
+        Err(error) => dotfiles_dir_read_error(parent_folder, error, verbose),
     }
 }
 
-fn run_rsync(source: &PathBuf, dest: &PathBuf, verbose: bool) -> Result<Output, std::io::Error> {
+fn run_rsync(
+    source: &PathBuf,
+    dest: &PathBuf,
+    verbose: bool,
+    dry_run: bool,
+) -> Result<Output, std::io::Error> {
     let mut command = Command::new("rsync");
     command.current_dir(source);
     command.arg("--ignore-existing");
     command.arg("-a");
     command.arg("--atimes");
-    // command.arg("--dry-run");
+
+    if dry_run {
+        command.arg("--dry-run");
+    }
 
     if verbose {
         command.arg("-v");
@@ -270,17 +281,20 @@ fn install_arch_packages(
         })
         .collect();
 
-    if dry_run {
-        dry_run_package_install_output(manager, &package_list);
-        return;
-    }
-
     let mut command = Command::new(manager);
     command.arg("-S");
     command.arg("--needed");
     command.arg("--noconfirm");
     command.arg("--color");
     command.arg("always");
+
+    if dry_run {
+        command.arg("-p");
+    }
+
+    if verbose {
+        command.arg("--verbose");
+    }
 
     package_list.iter().for_each(|p| {
         command.arg(p);

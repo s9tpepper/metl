@@ -13,17 +13,6 @@ pub fn packages_retrieved_successfully(manager: &str) {
     );
 }
 
-pub fn dry_run_package_install_output(manager: &str, packages: &[String]) {
-    println!(
-        "{} {} {} {} {}",
-        &*SUCCESS,
-        "DRY RUN:".yellow(),
-        manager.white().bold(),
-        "-S --needed --noconfirm".white(),
-        packages.join(" ").white().dimmed()
-    );
-}
-
 pub fn package_sync_success(manager: &str, packages: &[String]) {
     println!(
         "{} {} {} {}",
