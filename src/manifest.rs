@@ -2,7 +2,10 @@ use std::fs;
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::get_config_path;
+use crate::{
+    config::get_config_path,
+    errors::{failed_reading_manifest, manifest_parsing_error},
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Manifest {
@@ -36,19 +39,13 @@ pub struct Package {
 pub fn load_manifest() -> Manifest {
     let manifest_path = get_config_path().join("metl-manifest.toml");
 
-    let Ok(manifest_contents) = fs::read_to_string(manifest_path) else {
-        panic!("Error getting manifest contents");
+    let manifest_contents = match fs::read_to_string(&manifest_path) {
+        Ok(contents) => contents,
+        Err(error) => failed_reading_manifest(error, manifest_path),
     };
 
-    println!("manifest_contents: {manifest_contents:?}");
-    // let Ok(manifest) = toml::from_str::<Manifest>(manifest_contents.trim()) else {
-    //     panic!("Error parsing manifest contents");
-    // };
-
-    let manifest_result = toml::from_str::<Manifest>(manifest_contents.trim());
-    if let Err(error) = &manifest_result {
-        println!("error: {error:?}");
+    match toml::from_str::<Manifest>(manifest_contents.trim()) {
+        Ok(manifest) => manifest,
+        Err(error) => manifest_parsing_error(&error, manifest_path),
     }
-
-    manifest_result.unwrap()
 }

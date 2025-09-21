@@ -7,11 +7,14 @@ use thiserror::Error;
 
 use crate::{
     config::get_home_path,
+    errors::{pacman_install_error, pacman_unknown_error},
     manifest::{
         Manifest, Package,
         PackageManager::{Pacman, Yay},
         load_manifest,
     },
+    successes::{dry_run_package_install_output, package_sync_success},
+    warnings::dotfiles_repo_not_set,
 };
 
 #[derive(Debug, Error)]
@@ -20,27 +23,28 @@ pub enum RestoreError {
     DotfileClone,
 }
 
-pub fn restore(dry_run: bool) {
+pub fn sync(dry_run: bool, verbose: bool) {
     let manifest = load_manifest();
 
-    restore_packages(&manifest, dry_run);
-    restore_dotfiles(&manifest, dry_run);
+    restore_packages(&manifest, dry_run, verbose);
+    restore_dotfiles(&manifest, dry_run, verbose);
 }
 
-fn restore_dotfiles(manifest: &Manifest, dry_run: bool) {
+fn restore_dotfiles(manifest: &Manifest, dry_run: bool, verbose: bool) {
     let Some(repo) = &manifest.dotfiles_repo else {
+        dotfiles_repo_not_set();
         return;
     };
 
     let symlink = manifest.dotfiles_symlink.unwrap_or(false);
 
     match clone_dotfiles(repo, dry_run) {
-        Ok(_) => install_dotfiles(symlink),
+        Ok(_) => install_dotfiles(symlink, verbose),
         Err(error) => println!("{error}"),
     }
 }
 
-fn install_dotfiles(symlink: bool) {
+fn install_dotfiles(symlink: bool, verbose: bool) {
     let home_path = get_home_path();
     let dotfiles_path = home_path.join("dotfiles");
 
@@ -52,8 +56,8 @@ fn install_dotfiles(symlink: bool) {
         .flatten()
         .filter(|entry| entry.path().is_dir())
         .for_each(|entry| match symlink {
-            true => symlink_config(entry),
-            false => copy_config(entry),
+            true => symlink_config(entry, verbose),
+            false => copy_config(entry, verbose),
         });
 }
 
@@ -72,7 +76,7 @@ fn check_binary_availability(binary_name: &str) -> bool {
     status_code == 0
 }
 
-fn symlink_config(entry: DirEntry) {
+fn symlink_config(entry: DirEntry, verbose: bool) {
     if entry.file_name().into_string().expect("").starts_with(".") {
         return;
     }
@@ -110,7 +114,7 @@ fn symlink_config(entry: DirEntry) {
     }
 }
 
-fn copy_config(_entry: DirEntry) {
+fn copy_config(_entry: DirEntry, verbose: bool) {
     unimplemented!();
 }
 
@@ -138,19 +142,29 @@ fn clone_dotfiles(repo: &str, dry_run: bool) -> Result<(), RestoreError> {
     Ok(())
 }
 
-fn restore_packages(manifest: &Manifest, dry_run: bool) {
+fn restore_packages(manifest: &Manifest, dry_run: bool, verbose: bool) {
     manifest.managers.iter().for_each(|manager| match manager {
-        Pacman { packages, .. } => {
-            install_arch_packages("pacman", packages, manifest.locked_versions, dry_run)
-        }
+        Pacman { packages, .. } => install_arch_packages(
+            "pacman",
+            packages,
+            manifest.locked_versions,
+            dry_run,
+            verbose,
+        ),
 
         Yay { packages, .. } => {
-            install_arch_packages("yay", packages, manifest.locked_versions, dry_run);
+            install_arch_packages("yay", packages, manifest.locked_versions, dry_run, verbose);
         }
     });
 }
 
-fn install_arch_packages(manager: &str, packages: &[Package], locked: bool, dry_run: bool) {
+fn install_arch_packages(
+    manager: &str,
+    packages: &[Package],
+    locked: bool,
+    dry_run: bool,
+    verbose: bool,
+) {
     let package_list: Vec<String> = packages
         .iter()
         .map(|p| {
@@ -163,8 +177,7 @@ fn install_arch_packages(manager: &str, packages: &[Package], locked: bool, dry_
         .collect();
 
     if dry_run {
-        // TODO: Make this output pretty.
-        println!("{manager} -Sp {}", package_list.join(" "));
+        dry_run_package_install_output(manager, &package_list);
         return;
     }
 
@@ -172,25 +185,32 @@ fn install_arch_packages(manager: &str, packages: &[Package], locked: bool, dry_
     command.arg("-S");
     command.arg("--needed");
     command.arg("--noconfirm");
+    command.arg("--color");
+    command.arg("always");
 
     package_list.iter().for_each(|p| {
         command.arg(p);
     });
 
     command.stdout(Stdio::piped());
-    let Ok(command_result) = command.output() else {
-        panic!("Error running pacman install");
+    let command_result = match command.output() {
+        Ok(result) => result,
+        Err(error) => pacman_install_error(error),
     };
 
-    if !command_result.status.success() {
+    if verbose {
         let stdout = String::from_utf8(command_result.stdout);
-        let stderr = String::from_utf8(command_result.stderr);
-
         println!("{stdout:?}");
-        println!("{stderr:?}");
-
-        panic!("Error running pacman install");
     }
 
-    println!("great success");
+    if !command_result.status.success() {
+        if verbose {
+            let stderr = String::from_utf8(command_result.stderr);
+            println!("{stderr:?}");
+        }
+
+        pacman_unknown_error();
+    }
+
+    package_sync_success(manager, &package_list);
 }

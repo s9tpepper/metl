@@ -1,13 +1,13 @@
 use clap::{Parser, Subcommand};
 
-use crate::{generate::generate, restore::restore};
+use crate::{generate::generate, sync::sync};
 
 mod config;
 mod errors;
 mod generate;
 mod manifest;
-mod restore;
 mod successes;
+mod sync;
 mod warnings;
 
 /// Does all the things for a new system.
@@ -26,9 +26,12 @@ enum Commands {
     Search,
 
     /// Sync things
-    Restore {
+    Sync {
         #[arg(long, short = 'd')]
         dry_run: bool,
+
+        #[arg(long, short = 'v')]
+        verbose: bool,
     },
 }
 
@@ -46,6 +49,6 @@ fn main() {
         Commands::Remove => todo!(),
         Commands::Generate => generate(),
         Commands::Search => todo!(),
-        Commands::Restore { dry_run } => restore(dry_run),
+        Commands::Sync { dry_run, verbose } => sync(dry_run, verbose),
     }
 }

@@ -1,4 +1,5 @@
-use std::{io::Error, sync::LazyLock};
+use core::panic;
+use std::{io::Error, path::PathBuf, sync::LazyLock};
 
 use colored::{ColoredString, Colorize};
 
@@ -37,4 +38,37 @@ pub fn packages_parsing_error(manager: &str) -> ! {
         "Could not parse package output bytes from".white().dimmed(),
         manager.white().bold()
     );
+}
+
+pub fn failed_reading_manifest(error: std::io::Error, manifest_path: PathBuf) -> ! {
+    panic!(
+        "{} {} {}\n\t{}",
+        &*ERROR,
+        "Could not read manifest at path:".white().dimmed(),
+        manifest_path.to_string_lossy().white().bold(),
+        error.to_string().cyan().dimmed()
+    );
+}
+
+pub fn manifest_parsing_error(error: &toml::de::Error, manifest_path: PathBuf) -> ! {
+    panic!(
+        "{} {} {:?}\n{}",
+        &*ERROR,
+        "Failed to parse the manifest:".white().dimmed(),
+        manifest_path,
+        error.to_string().cyan().dimmed()
+    );
+}
+
+pub fn pacman_install_error(error: std::io::Error) -> ! {
+    panic!(
+        "{} {} {}",
+        &*ERROR,
+        "'pacman -S ...' failed\n".white().dimmed(),
+        error.to_string().cyan()
+    );
+}
+
+pub fn pacman_unknown_error() -> ! {
+    panic!("{} {}", &*ERROR, "'pacman -S ...' failed".white().dimmed(),);
 }

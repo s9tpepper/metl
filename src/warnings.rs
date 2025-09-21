@@ -12,3 +12,11 @@ pub fn warn_package_output(package_output: &str) {
         package_output.magenta().bold()
     );
 }
+
+pub fn dotfiles_repo_not_set() {
+    println!(
+        "{} {}",
+        &*WARNING,
+        "dotfiles repo has not been configured".white().dimmed(),
+    );
+}
