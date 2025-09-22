@@ -34,10 +34,6 @@ enum Commands {
     #[command(visible_alias = "g")]
     Generate,
 
-    /// Search for a package
-    #[command(visible_alias = "q")]
-    Search,
-
     /// Sync things
     #[command(visible_alias = "s")]
     Sync {
@@ -62,7 +58,6 @@ fn main() {
         Commands::Install { args } => install(args),
         Commands::Remove { args } => remove(args),
         Commands::Generate => generate(),
-        Commands::Search => todo!(),
         Commands::Sync { dry_run, verbose } => sync(dry_run, verbose),
     }
 }
