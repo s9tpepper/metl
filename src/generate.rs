@@ -18,7 +18,7 @@ pub fn generate() {
     let config = load_config();
 
     let Config {
-        package_managers,
+        package_manager,
         locked_versions,
         dotfiles_repo,
         dotfiles_symlink,
@@ -31,14 +31,12 @@ pub fn generate() {
         dotfiles_symlink,
     };
 
-    package_managers
-        .iter()
-        .for_each(|package_manager| match package_manager.as_str() {
-            "pacman" => get_arch_packages("pacman", &mut manifest, locked_versions),
-            "yay" => get_arch_packages("yay", &mut manifest, locked_versions),
-
-            _ => unsupported_package_manager(package_manager),
-        });
+    match package_manager.as_str() {
+        "pacman" => get_arch_packages("pacman", &mut manifest, locked_versions),
+        "paru" => get_arch_packages("paru", &mut manifest, locked_versions),
+        "yay" => get_arch_packages("yay", &mut manifest, locked_versions),
+        _ => unsupported_package_manager(&package_manager),
+    }
 
     write_manifest(manifest);
 }
@@ -54,8 +52,7 @@ fn write_manifest(manifest: Manifest) {
 
 fn get_arch_packages(manager: &str, manifest: &mut Manifest, locked_versions: bool) {
     let flags = match manager {
-        "pacman" => "-Qne",
-        "yay" => "-Qme",
+        "pacman" | "yay" | "paru" => "-Qe",
 
         _ => unsupported_package_manager(manager),
     };

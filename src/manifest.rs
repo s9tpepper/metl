@@ -17,6 +17,12 @@ pub struct Manifest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum PackageManager {
+    #[serde(rename(serialize = "paru", deserialize = "paru"))]
+    Paru {
+        name: String,
+        packages: Vec<Package>,
+    },
+
     #[serde(rename(serialize = "pacman", deserialize = "pacman"))]
     Pacman {
         name: String,

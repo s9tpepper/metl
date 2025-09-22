@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Default, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Config {
     pub locked_versions: bool,
-    pub package_managers: Vec<String>,
+    pub package_manager: String,
     pub dotfiles_repo: Option<String>,
     pub dotfiles_symlink: Option<bool>,
 }
@@ -38,7 +38,7 @@ pub fn load_config() -> Config {
 #[test]
 fn test_load_config() {
     let toml = r#"
-package_managers = ["pacman", "yay"]
+package_manager = "pacman"
 locked_versions = true
 dotfiles_repo = "repo_url"
 dotfiles_symlink = true
@@ -51,7 +51,7 @@ dotfiles_symlink = true
     assert_eq!(
         config,
         Config {
-            package_managers: vec!["pacman".into(), "yay".into()],
+            package_manager: "pacman".into(),
             locked_versions: true,
             dotfiles_repo: Some("repo_url".into()),
             dotfiles_symlink: Some(true),

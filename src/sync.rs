@@ -14,7 +14,7 @@ use crate::{
     },
     manifest::{
         Manifest, Package,
-        PackageManager::{Pacman, Yay},
+        PackageManager::{self, Pacman, Yay},
         load_manifest,
     },
     successes::{
@@ -251,6 +251,10 @@ fn clone_dotfiles(repo: &str, dry_run: bool, verbose: bool) -> Result<(), Restor
 
 fn restore_packages(manifest: &Manifest, dry_run: bool, verbose: bool) {
     manifest.managers.iter().for_each(|manager| match manager {
+        PackageManager::Paru { packages, .. } => {
+            install_arch_packages("paru", packages, manifest.locked_versions, dry_run, verbose);
+        }
+
         Pacman { packages, .. } => install_arch_packages(
             "pacman",
             packages,
