@@ -44,6 +44,7 @@ pub fn sync(dry_run: bool, verbose: bool) {
 
 pub fn check_prereqs(config: &Config) {
     let mut missing: Vec<String> = vec![];
+    check_if_available(&config.package_manager.to_string(), &mut missing);
     check_if_available("git", &mut missing);
 
     if let Some(symlink) = config.dotfiles_symlink
