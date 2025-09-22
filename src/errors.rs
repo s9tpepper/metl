@@ -127,3 +127,12 @@ pub fn remove_failed(installed: &str, code: i32) {
         code.to_string().cyan().bold(),
     );
 }
+
+pub fn missing_prerequirements(missing: &[String]) {
+    panic!(
+        "{} {} {}",
+        &*ERROR,
+        "Missing pre-requisites:".white().dimmed(),
+        missing.join(" ").white().bold()
+    );
+}

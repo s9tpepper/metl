@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use crate::{
     config::{Config, get_home_path, load_config},
-    errors::{dotfiles_clone_error, dotfiles_dir_read_error},
+    errors::{dotfiles_clone_error, dotfiles_dir_read_error, missing_prerequirements},
     manifest::{
         Manifest, Package,
         PackageManager::{self, Pacman, Paru, Yay},
@@ -33,10 +33,52 @@ pub enum RestoreError {
 
 pub fn sync(dry_run: bool, verbose: bool) {
     let config = load_config();
+
+    check_prereqs(&config);
+
     let manifest = load_manifest();
 
     restore_packages(&config, &manifest, dry_run, verbose);
     restore_dotfiles(&config, dry_run, verbose);
+}
+
+pub fn check_prereqs(config: &Config) {
+    let mut missing: Vec<String> = vec![];
+    check_if_available("git", &mut missing);
+
+    if let Some(symlink) = config.dotfiles_symlink
+        && symlink
+    {
+        check_if_available("stow", &mut missing);
+    } else {
+        check_if_available("rsync", &mut missing);
+    }
+
+    if !missing.is_empty() {
+        missing_prerequirements(&missing);
+    }
+}
+
+fn check_if_available(cli_tool: &str, missing: &mut Vec<String>) {
+    let mut command = Command::new(cli_tool);
+    let Ok(output) = command.output() else {
+        println!("couldn't run command");
+        missing.push(cli_tool.to_string());
+        return;
+    };
+
+    let Some(code) = output.status.code() else {
+        println!("couldn't get command code");
+        missing.push(cli_tool.to_string());
+        return;
+    };
+
+    if code == 127 {
+        println!("command code 127");
+        missing.push(cli_tool.to_string());
+    }
+
+    println!("code: {code}");
 }
 
 fn restore_dotfiles(config: &Config, dry_run: bool, verbose: bool) {
