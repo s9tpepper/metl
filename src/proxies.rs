@@ -1,14 +1,26 @@
 use std::{io::Write, process::Command};
 
-use crate::{errors::package_install_failed, generate::generate};
+use crate::errors::unsupported_package_manager;
+use crate::{errors::package_install_failed, generate::generate, manifest::PackageManager};
 
-pub fn pacman_proxy<S, F>(args: Vec<String>, default_args: Vec<&str>, success: S, failed: F)
-where
+use crate::manifest::PackageManager::{Pacman, Paru, Yay};
+
+pub fn pacman_compatible_proxy<S, F>(
+    manager: PackageManager,
+    args: Vec<String>,
+    default_args: Vec<&str>,
+    success: S,
+    failed: F,
+) where
     S: Fn(&str),
     F: Fn(&str, i32),
 {
-    // TODO: update this after refactoring config to use only a single defined package manager
-    let mut command = Command::new("paru");
+    #[allow(unreachable_patterns)]
+    let mut command = match manager {
+        Yay | Paru | Pacman => Command::new(manager.to_string()),
+        _ => unsupported_package_manager(manager),
+    };
+
     let mut proxied_cmd = String::new();
 
     if args.len() == 1 {

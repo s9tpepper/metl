@@ -2,25 +2,49 @@ use std::{ffi::OsString, path::PathBuf, process::Output, sync::LazyLock};
 
 use colored::{ColoredString, Colorize};
 
+use crate::manifest::PackageManager;
+
 static SUCCESS: LazyLock<ColoredString> = LazyLock::new(|| "[SUCCESS]".green().bold());
 
-pub fn packages_retrieved_successfully(manager: &str) {
+pub fn packages_retrieved_successfully(manager: PackageManager) {
     println!(
         "{} {} {}",
         &*SUCCESS,
-        manager.white().bold(),
+        manager.to_string().white().bold(),
         "packages saved.".white()
     );
 }
 
-pub fn package_sync_success(manager: &str, packages: &[String]) {
-    println!(
-        "{} {} {} {}",
-        &*SUCCESS,
-        manager.white().bold(),
-        "-S --needed --noconfirm".white(),
-        packages.join(" ").white().dimmed()
-    );
+pub fn package_sync_success(
+    manager: &PackageManager,
+    packages: &[String],
+    install_errors: &[(&String, Option<std::io::Error>)],
+) {
+    if install_errors.is_empty() {
+        println!(
+            "{} {} {} {}",
+            &*SUCCESS,
+            manager.to_string().white().bold(),
+            "-S --needed --noconfirm".white().dimmed(),
+            packages.join(" ").white().bold()
+        );
+    } else {
+        let failed_packages =
+            install_errors
+                .iter()
+                .fold(Vec::<String>::new(), |mut acc, (package, _)| {
+                    acc.push(package.to_string());
+                    acc
+                });
+
+        println!(
+            "{} {} {} {}",
+            &*SUCCESS,
+            manager.to_string().white().bold(),
+            "completed with some failures:".white().dimmed(),
+            failed_packages.join(" ").white().bold()
+        );
+    }
 }
 
 pub fn dry_run_dotfiles_clone(repo: &str, dotfiles_path: PathBuf) {
@@ -39,9 +63,10 @@ pub fn dry_run_dotfiles_clone(repo: &str, dotfiles_path: PathBuf) {
 
 pub fn stow_success(name: OsString) {
     println!(
-        "{} {} {}",
+        "{} {} {} {}",
         &*SUCCESS,
-        "stow symlinked".white(),
+        "stow".white().bold(),
+        "symlinked".white().dimmed(),
         name.to_string_lossy().white().bold(),
     );
 }
@@ -94,5 +119,15 @@ pub fn remove_successful(installed: &str) {
         &*SUCCESS,
         "Removed:".white().dimmed(),
         installed.white().bold(),
+    );
+}
+
+pub fn package_install_success(manager: PackageManager, package: &str) {
+    println!(
+        "{} {} {} {}",
+        &*SUCCESS,
+        manager.to_string().white().bold(),
+        "installed:".white().dimmed(),
+        package.white().bold(),
     );
 }

@@ -3,16 +3,16 @@ use std::{io::Error, path::PathBuf, sync::LazyLock};
 
 use colored::{ColoredString, Colorize};
 
-use crate::sync::RestoreError;
+use crate::{manifest::PackageManager, sync::RestoreError};
 
 static ERROR: LazyLock<ColoredString> = LazyLock::new(|| "[ERROR]".red().bold());
 
-pub fn unsupported_package_manager(package_manager: &str) -> ! {
+pub fn unsupported_package_manager(package_manager: PackageManager) -> ! {
     panic!(
         "{} {} {}",
         &*ERROR,
         "Unsupported package manager:".red().dimmed(),
-        package_manager.white().bold(),
+        package_manager.to_string().white().bold(),
     );
 }
 
@@ -33,12 +33,12 @@ pub fn packages_list_error(error: Option<Error>) -> ! {
     )
 }
 
-pub fn packages_parsing_error(manager: &str) -> ! {
+pub fn packages_parsing_error(manager: PackageManager) -> ! {
     panic!(
         "{} {} {}",
         &*ERROR,
         "Could not parse package output bytes from".white().dimmed(),
-        manager.white().bold()
+        manager.to_string().white().bold()
     );
 }
 
@@ -62,17 +62,23 @@ pub fn manifest_parsing_error(error: &toml::de::Error, manifest_path: PathBuf) -
     );
 }
 
-pub fn pacman_install_error(error: std::io::Error) -> ! {
+pub fn pacman_install_error(manager: PackageManager, error: std::io::Error) -> ! {
     panic!(
-        "{} {} {}",
+        "{} {} {} {}",
         &*ERROR,
-        "'pacman -S ...' failed\n".white().dimmed(),
+        manager.to_string().white().bold(),
+        "'-S ...' failed\n".white().dimmed(),
         error.to_string().cyan()
     );
 }
 
-pub fn pacman_unknown_error() -> ! {
-    panic!("{} {}", &*ERROR, "'pacman -S ...' failed".white().dimmed(),);
+pub fn pacman_unknown_error(manager: PackageManager) -> ! {
+    panic!(
+        "{} {} {}",
+        &*ERROR,
+        manager.to_string().white().bold(),
+        "'-S ...' failed".white().dimmed(),
+    );
 }
 
 pub fn dotfiles_clone_error(error: RestoreError, verbose: bool) -> ! {

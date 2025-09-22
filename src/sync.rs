@@ -8,22 +8,22 @@ use std::{
 use thiserror::Error;
 
 use crate::{
-    config::get_home_path,
+    config::{Config, get_home_path, load_config},
     errors::{
         dotfiles_clone_error, dotfiles_dir_read_error, pacman_install_error, pacman_unknown_error,
     },
     manifest::{
         Manifest, Package,
-        PackageManager::{self, Pacman, Yay},
+        PackageManager::{self, Pacman, Paru, Yay},
         load_manifest,
     },
     successes::{
-        dotfiles_copied_successfully, dry_run_dotfiles_clone, package_sync_success,
-        pacman_dry_run_header, stow_success,
+        dotfiles_copied_successfully, dry_run_dotfiles_clone, package_install_success,
+        package_sync_success, pacman_dry_run_header, stow_success,
     },
     warnings::{
         dotfiles_copy_failed, dotfiles_repo_not_set, warn_dotfiles_symlink_failed,
-        warn_dotfiles_symlink_non_zero, warn_dotfiles_symlink_signal_exit,
+        warn_dotfiles_symlink_non_zero, warn_dotfiles_symlink_signal_exit, warn_failed_installs,
     },
 };
 
@@ -34,19 +34,20 @@ pub enum RestoreError {
 }
 
 pub fn sync(dry_run: bool, verbose: bool) {
+    let config = load_config();
     let manifest = load_manifest();
 
-    restore_packages(&manifest, dry_run, verbose);
-    restore_dotfiles(&manifest, dry_run, verbose);
+    restore_packages(&config, &manifest, dry_run, verbose);
+    restore_dotfiles(&config, dry_run, verbose);
 }
 
-fn restore_dotfiles(manifest: &Manifest, dry_run: bool, verbose: bool) {
-    let Some(repo) = &manifest.dotfiles_repo else {
+fn restore_dotfiles(config: &Config, dry_run: bool, verbose: bool) {
+    let Some(repo) = &config.dotfiles_repo else {
         dotfiles_repo_not_set();
         return;
     };
 
-    let symlink = manifest.dotfiles_symlink.unwrap_or(false);
+    let symlink = config.dotfiles_symlink.unwrap_or(false);
 
     match clone_dotfiles(repo, dry_run, verbose) {
         Ok(_) => install_dotfiles(symlink, verbose, dry_run),
@@ -249,28 +250,36 @@ fn clone_dotfiles(repo: &str, dry_run: bool, verbose: bool) -> Result<(), Restor
     Ok(())
 }
 
-fn restore_packages(manifest: &Manifest, dry_run: bool, verbose: bool) {
-    manifest.managers.iter().for_each(|manager| match manager {
-        PackageManager::Paru { packages, .. } => {
-            install_arch_packages("paru", packages, manifest.locked_versions, dry_run, verbose);
-        }
-
-        Pacman { packages, .. } => install_arch_packages(
-            "pacman",
-            packages,
-            manifest.locked_versions,
+fn restore_packages(config: &Config, manifest: &Manifest, dry_run: bool, verbose: bool) {
+    match config.package_manager {
+        Pacman => install_arch_packages(
+            PackageManager::Pacman,
+            &manifest.packages,
+            config.locked_versions,
             dry_run,
             verbose,
         ),
 
-        Yay { packages, .. } => {
-            install_arch_packages("yay", packages, manifest.locked_versions, dry_run, verbose);
-        }
-    });
+        Paru => install_arch_packages(
+            PackageManager::Paru,
+            &manifest.packages,
+            config.locked_versions,
+            dry_run,
+            verbose,
+        ),
+
+        Yay => install_arch_packages(
+            PackageManager::Yay,
+            &manifest.packages,
+            config.locked_versions,
+            dry_run,
+            verbose,
+        ),
+    }
 }
 
 fn install_arch_packages(
-    manager: &str,
+    manager: PackageManager,
     packages: &[Package],
     locked: bool,
     dry_run: bool,
@@ -287,46 +296,63 @@ fn install_arch_packages(
         })
         .collect();
 
-    let mut command = Command::new(manager);
-    command.arg("-S");
-    command.arg("--needed");
-    command.arg("--noconfirm");
-    command.arg("--color");
-    command.arg("always");
+    let mut install_errors: Vec<(&String, Option<std::io::Error>)> = vec![];
+    package_list.iter().for_each(|package| {
+        let mut command = Command::new(manager.to_string());
+        command.arg("-S");
+        command.arg("--needed");
+        command.arg("--noconfirm");
+        command.arg("--color");
+        command.arg("always");
 
-    if dry_run {
-        command.arg("-p");
-    }
-
-    if verbose {
-        command.arg("--verbose");
-    }
-
-    package_list.iter().for_each(|p| {
-        command.arg(p);
-    });
-
-    command.stdout(Stdio::piped());
-    let command_result = match command.output() {
-        Ok(result) => result,
-        Err(error) => pacman_install_error(error),
-    };
-
-    if verbose {
-        pacman_dry_run_header();
-        let _ = std::io::stdout().write_all(&command_result.stdout);
-    }
-
-    if !command_result.status.success() {
-        if verbose {
-            let stderr = String::from_utf8(command_result.stderr);
-            println!("{stderr:?}");
+        if dry_run {
+            command.arg("-p");
         }
 
-        pacman_unknown_error();
+        if verbose {
+            command.arg("--verbose");
+        }
+
+        command.arg(package);
+
+        command.stdout(Stdio::piped());
+        let command_result = match command.output() {
+            Ok(result) => result,
+            Err(error) => {
+                install_errors.push((package, Some(error)));
+                return;
+            }
+        };
+
+        if dry_run {
+            pacman_dry_run_header();
+        }
+
+        if verbose {
+            let _ = std::io::stdout().write_all(&command_result.stdout);
+        }
+
+        if verbose && !command_result.status.success() {
+            let stderr = String::from_utf8(command_result.stderr);
+            println!("{stderr:?}");
+
+            install_errors.push((package, None));
+        }
+
+        if let Some(code) = command_result.status.code()
+            && code == 0
+        {
+            package_install_success(manager.clone(), package);
+        } else {
+            install_errors.push((package, None));
+        }
+    });
+
+    if !install_errors.is_empty() {
+        warn_failed_installs(&manager, &install_errors);
     }
 
     if !dry_run {
-        package_sync_success(manager, &package_list);
+        package_sync_success(&manager.clone(), &package_list, &install_errors);
     }
 }

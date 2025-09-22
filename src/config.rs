@@ -3,10 +3,12 @@ use std::{fs::read_to_string, path::PathBuf};
 use directories::UserDirs;
 use serde::{Deserialize, Serialize};
 
+use crate::manifest::PackageManager;
+
 #[derive(Default, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Config {
     pub locked_versions: bool,
-    pub package_manager: String,
+    pub package_manager: PackageManager,
     pub dotfiles_repo: Option<String>,
     pub dotfiles_symlink: Option<bool>,
 }
@@ -51,7 +53,7 @@ dotfiles_symlink = true
     assert_eq!(
         config,
         Config {
-            package_manager: "pacman".into(),
+            package_manager: PackageManager::Pacman,
             locked_versions: true,
             dotfiles_repo: Some("repo_url".into()),
             dotfiles_symlink: Some(true),

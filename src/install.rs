@@ -1,15 +1,27 @@
-use crate::{errors::install_failed, proxies::pacman_proxy, successes::install_successful};
+use crate::{
+    config::load_config,
+    errors::install_failed,
+    manifest::PackageManager::{Pacman, Paru, Yay},
+    proxies::pacman_compatible_proxy,
+    successes::install_successful,
+};
 
 pub fn install(args: Vec<String>) {
-    // TODO: read config and call the correct proxy function for the configured package manager
-    pacman_proxy(
-        args,
-        vec!["-S", "--noconfirm"],
-        |proxied| {
-            install_successful(proxied);
-        },
-        |proxied, code| {
-            install_failed(proxied, code);
-        },
-    );
+    let config = load_config();
+
+    match config.package_manager {
+        Pacman | Paru | Yay => {
+            pacman_compatible_proxy(
+                config.package_manager,
+                args,
+                vec!["-S", "--noconfirm"],
+                |proxied| {
+                    install_successful(proxied);
+                },
+                |proxied, code| {
+                    install_failed(proxied, code);
+                },
+            );
+        }
+    }
 }

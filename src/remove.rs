@@ -1,15 +1,27 @@
-use crate::{errors::remove_failed, proxies::pacman_proxy, successes::remove_successful};
+use crate::{
+    config::load_config,
+    errors::remove_failed,
+    manifest::PackageManager::{Pacman, Paru, Yay},
+    proxies::pacman_compatible_proxy,
+    successes::remove_successful,
+};
 
 pub fn remove(args: Vec<String>) {
-    // TODO: read config and call the correct proxy function for the configured package manager
-    pacman_proxy(
-        args,
-        vec!["-R", "--noconfirm"],
-        |proxied| {
-            remove_successful(proxied);
-        },
-        |proxied, code| {
-            remove_failed(proxied, code);
-        },
-    );
+    let config = load_config();
+
+    match config.package_manager {
+        Pacman | Paru | Yay => {
+            pacman_compatible_proxy(
+                config.package_manager,
+                args,
+                vec!["-R", "--noconfirm"],
+                |proxied| {
+                    remove_successful(proxied);
+                },
+                |proxied, code| {
+                    remove_failed(proxied, code);
+                },
+            );
+        }
+    }
 }

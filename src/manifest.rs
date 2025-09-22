@@ -9,34 +9,34 @@ use crate::{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Manifest {
-    pub managers: Vec<PackageManager>,
-    pub locked_versions: bool,
-    pub dotfiles_repo: Option<String>,
-    pub dotfiles_symlink: Option<bool>,
+    pub packages: Vec<Package>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub enum PackageManager {
-    #[serde(rename(serialize = "paru", deserialize = "paru"))]
-    Paru {
-        name: String,
-        packages: Vec<Package>,
-    },
-
+    #[default]
     #[serde(rename(serialize = "pacman", deserialize = "pacman"))]
-    Pacman {
-        name: String,
-        packages: Vec<Package>,
-    },
+    Pacman,
+
+    #[serde(rename(serialize = "paru", deserialize = "paru"))]
+    Paru,
 
     #[serde(rename(serialize = "yay", deserialize = "yay"))]
-    Yay {
-        name: String,
-        packages: Vec<Package>,
-    },
+    Yay,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[allow(clippy::to_string_trait_impl)]
+impl ToString for PackageManager {
+    fn to_string(&self) -> String {
+        match self {
+            PackageManager::Paru => "paru".to_string(),
+            PackageManager::Pacman => "pacman".to_string(),
+            PackageManager::Yay => "yay".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Package {
     pub name: String,
     pub version: Option<String>,

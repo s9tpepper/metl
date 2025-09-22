@@ -5,11 +5,11 @@ use std::{
 
 use crate::{
     config::{Config, get_config_path, load_config},
-    errors::{
-        manifest_serialization_error, packages_list_error, packages_parsing_error,
-        unsupported_package_manager,
+    errors::{manifest_serialization_error, packages_list_error, packages_parsing_error},
+    manifest::{
+        Manifest, Package,
+        PackageManager::{self, Pacman, Paru, Yay},
     },
-    manifest::{Manifest, Package, PackageManager},
     successes::packages_retrieved_successfully,
     warnings::warn_package_output,
 };
@@ -20,22 +20,15 @@ pub fn generate() {
     let Config {
         package_manager,
         locked_versions,
-        dotfiles_repo,
-        dotfiles_symlink,
+        ..
     } = config;
 
-    let mut manifest = Manifest {
-        managers: vec![],
-        locked_versions,
-        dotfiles_repo,
-        dotfiles_symlink,
-    };
+    let mut manifest = Manifest { packages: vec![] };
 
-    match package_manager.as_str() {
-        "pacman" => get_arch_packages("pacman", &mut manifest, locked_versions),
-        "paru" => get_arch_packages("paru", &mut manifest, locked_versions),
-        "yay" => get_arch_packages("yay", &mut manifest, locked_versions),
-        _ => unsupported_package_manager(&package_manager),
+    match package_manager {
+        Paru => get_arch_packages(package_manager, &mut manifest, locked_versions),
+        Pacman => get_arch_packages(package_manager, &mut manifest, locked_versions),
+        Yay => get_arch_packages(package_manager, &mut manifest, locked_versions),
     }
 
     write_manifest(manifest);
@@ -50,14 +43,12 @@ fn write_manifest(manifest: Manifest) {
     let _ = fs::write(manifest_path, manifest_output);
 }
 
-fn get_arch_packages(manager: &str, manifest: &mut Manifest, locked_versions: bool) {
+fn get_arch_packages(manager: PackageManager, manifest: &mut Manifest, locked_versions: bool) {
     let flags = match manager {
-        "pacman" | "yay" | "paru" => "-Qe",
-
-        _ => unsupported_package_manager(manager),
+        Pacman | Yay | Paru => "-Qe",
     };
 
-    let mut command = Command::new(manager);
+    let mut command = Command::new(manager.to_string());
     command.arg(flags);
 
     let list_cmd_result = command
@@ -101,19 +92,7 @@ fn get_arch_packages(manager: &str, manifest: &mut Manifest, locked_versions: bo
         })
     }
 
-    manifest.managers.push(match manager {
-        "pacman" => PackageManager::Pacman {
-            name: manager.into(),
-            packages,
-        },
-
-        "yay" => PackageManager::Yay {
-            name: manager.into(),
-            packages,
-        },
-
-        _ => unsupported_package_manager(manager),
-    });
+    manifest.packages = packages;
 
     packages_retrieved_successfully(manager);
 }

@@ -2,6 +2,8 @@ use std::{ffi::OsString, path::PathBuf, sync::LazyLock};
 
 use colored::{ColoredString, Colorize};
 
+use crate::manifest::PackageManager;
+
 static WARNING: LazyLock<ColoredString> = LazyLock::new(|| "[WARNING]".yellow().bold());
 
 pub fn warn_package_output(package_output: &str) {
@@ -61,4 +63,34 @@ pub fn dotfiles_copy_failed(name: OsString, to: PathBuf, error: std::io::Error) 
         to.to_string_lossy().white().bold(),
         error.to_string().cyan().bold(),
     );
+}
+
+pub fn warn_failed_installs(
+    manager: &PackageManager,
+    install_errors: &[(&String, Option<std::io::Error>)],
+) {
+    install_errors
+        .iter()
+        .for_each(|(package, error)| match error {
+            Some(err) => {
+                println!(
+                    "{} {} {} {}\n{}",
+                    &*WARNING,
+                    manager.to_string().white().bold(),
+                    "failed to install".white().dimmed(),
+                    package.white().bold(),
+                    err.to_string().cyan().bold(),
+                );
+            }
+
+            None => {
+                println!(
+                    "{} {} {} {}",
+                    &*WARNING,
+                    manager.to_string().white().bold(),
+                    "failed to install".white().dimmed(),
+                    package.white().bold(),
+                );
+            }
+        });
 }
