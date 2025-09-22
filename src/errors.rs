@@ -62,25 +62,6 @@ pub fn manifest_parsing_error(error: &toml::de::Error, manifest_path: PathBuf) -
     );
 }
 
-pub fn pacman_install_error(manager: PackageManager, error: std::io::Error) -> ! {
-    panic!(
-        "{} {} {} {}",
-        &*ERROR,
-        manager.to_string().white().bold(),
-        "'-S ...' failed\n".white().dimmed(),
-        error.to_string().cyan()
-    );
-}
-
-pub fn pacman_unknown_error(manager: PackageManager) -> ! {
-    panic!(
-        "{} {} {}",
-        &*ERROR,
-        manager.to_string().white().bold(),
-        "'-S ...' failed".white().dimmed(),
-    );
-}
-
 pub fn dotfiles_clone_error(error: RestoreError, verbose: bool) -> ! {
     if verbose {
         panic!(

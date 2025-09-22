@@ -9,9 +9,7 @@ use thiserror::Error;
 
 use crate::{
     config::{Config, get_home_path, load_config},
-    errors::{
-        dotfiles_clone_error, dotfiles_dir_read_error, pacman_install_error, pacman_unknown_error,
-    },
+    errors::{dotfiles_clone_error, dotfiles_dir_read_error},
     manifest::{
         Manifest, Package,
         PackageManager::{self, Pacman, Paru, Yay},
