@@ -5,17 +5,22 @@ use std::{
 
 use crate::{
     config::{Config, get_config_path, load_config},
-    errors::{manifest_serialization_error, packages_list_error, packages_parsing_error},
+    errors::{
+        manifest_serialization_error, missing_prerequirements, packages_list_error,
+        packages_parsing_error,
+    },
     manifest::{
         Manifest, Package,
         PackageManager::{self, Pacman, Paru, Yay},
     },
     successes::packages_retrieved_successfully,
+    sync::check_if_available,
     warnings::warn_package_output,
 };
 
 pub fn generate() {
     let config = load_config();
+    check_prereqs(&config);
 
     let Config {
         package_manager,
@@ -32,6 +37,15 @@ pub fn generate() {
     }
 
     write_manifest(manifest);
+}
+
+pub fn check_prereqs(config: &Config) {
+    let mut missing: Vec<String> = vec![];
+    check_if_available(&config.package_manager.to_string(), &mut missing);
+
+    if !missing.is_empty() {
+        missing_prerequirements(&missing);
+    }
 }
 
 fn write_manifest(manifest: Manifest) {

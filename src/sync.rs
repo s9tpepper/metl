@@ -60,7 +60,7 @@ pub fn check_prereqs(config: &Config) {
     }
 }
 
-fn check_if_available(cli_tool: &str, missing: &mut Vec<String>) {
+pub fn check_if_available(cli_tool: &str, missing: &mut Vec<String>) {
     let mut command = Command::new(cli_tool);
     let Ok(output) = command.output() else {
         println!("couldn't run command");
