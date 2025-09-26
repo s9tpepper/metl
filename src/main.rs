@@ -14,33 +14,36 @@ mod successes;
 mod sync;
 mod warnings;
 
-/// Does all the things for a new system.
 #[derive(Subcommand)]
 enum Commands {
-    /// Install a package
+    /// Install a package, update manifest file, and push to git repo
     #[command(visible_alias = "i")]
     Install {
+        /// Flags for your configured package manager as defined by the package manager
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
 
-    /// Remove a package
+    /// Remove a package, update manifest file, and push to git repo
     #[command(visible_alias = "r")]
     Remove {
+        /// Flags for your configured package manager as defined by the package manager
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
 
-    /// Generate a package manifest
+    /// Generate a package manifest at ~/.config/metl/manifest.toml
     #[command(visible_alias = "g")]
     Generate,
 
-    /// Sync things
+    /// Sync system with all packages in manifest file at ~/.config/metl/manifest.toml
     #[command(visible_alias = "s")]
     Sync {
+        /// Run a dry run without modifying the system
         #[arg(long, short = 'd')]
         dry_run: bool,
 
+        /// Enable verbose output
         #[arg(long, short = 'v')]
         verbose: bool,
     },
