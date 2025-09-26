@@ -12,14 +12,14 @@ pub fn install(args: Vec<String>) {
     match config.package_manager {
         Pacman | Paru | Yay => {
             pacman_compatible_proxy(
-                config.package_manager,
-                args,
+                &config.package_manager,
+                &args,
                 vec!["-S", "--noconfirm"],
                 |proxied| {
-                    install_successful(proxied);
+                    install_successful(&config.package_manager, proxied);
                 },
                 |proxied, code| {
-                    install_failed(proxied, code);
+                    install_failed(&config.package_manager, proxied, code);
                 },
             );
         }

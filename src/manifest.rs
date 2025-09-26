@@ -43,7 +43,7 @@ pub struct Package {
 }
 
 pub fn load_manifest() -> Manifest {
-    let manifest_path = get_config_path().join("metl-manifest.toml");
+    let manifest_path = get_config_path().join("manifest.toml");
 
     let manifest_contents = match fs::read_to_string(&manifest_path) {
         Ok(contents) => contents,

@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 
 use crate::{generate::generate, install::install, remove::remove, sync::sync};
 
+mod commits;
 mod config;
 mod errors;
 mod generate;

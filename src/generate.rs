@@ -53,7 +53,7 @@ fn write_manifest(manifest: Manifest) {
         manifest_serialization_error();
     };
 
-    let manifest_path = get_config_path().join("metl-manifest.toml");
+    let manifest_path = get_config_path().join("manifest.toml");
     let _ = fs::write(manifest_path, manifest_output);
 }
 

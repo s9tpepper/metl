@@ -12,14 +12,14 @@ pub fn remove(args: Vec<String>) {
     match config.package_manager {
         Pacman | Paru | Yay => {
             pacman_compatible_proxy(
-                config.package_manager,
-                args,
+                &config.package_manager,
+                &args,
                 vec!["-R", "--noconfirm"],
                 |proxied| {
-                    remove_successful(proxied);
+                    remove_successful(&config.package_manager, proxied);
                 },
                 |proxied, code| {
-                    remove_failed(proxied, code);
+                    remove_failed(&config.package_manager, proxied, code);
                 },
             );
         }

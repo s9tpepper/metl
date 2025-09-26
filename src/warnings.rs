@@ -15,14 +15,6 @@ pub fn warn_package_output(package_output: &str) {
     );
 }
 
-pub fn dotfiles_repo_not_set() {
-    println!(
-        "{} {}",
-        &*WARNING,
-        "dotfiles repo has not been configured".white().dimmed(),
-    );
-}
-
 pub fn warn_dotfiles_symlink_failed(name: OsString, error: std::io::Error) {
     println!(
         "{} {} {}\n{}",
@@ -93,4 +85,111 @@ pub fn warn_failed_installs(
                 );
             }
         });
+}
+
+pub fn warn_git_add_metl_manifest_failed(error: Option<std::io::Error>) {
+    match error {
+        Some(err) => {
+            println!(
+                "{} {}\n{}",
+                &*WARNING,
+                "failed to git add metl manifest files".white().dimmed(),
+                err.to_string().cyan().bold(),
+            );
+        }
+        None => {
+            println!(
+                "{} {}",
+                &*WARNING,
+                "failed to git add metl manifest files".white().dimmed(),
+            );
+        }
+    }
+}
+
+pub fn warn_git_add_metl_manifest_code(code: i32) {
+    println!(
+        "{} {} {}",
+        &*WARNING,
+        "failed to git add metl manifest files, code:"
+            .white()
+            .dimmed(),
+        code.to_string().cyan().bold(),
+    );
+}
+
+pub fn warn_metl_manifest_commit_failed(error: Option<std::io::Error>) {
+    match error {
+        Some(err) => {
+            println!(
+                "{} {}\n{}",
+                &*WARNING,
+                "failed to git commit metl manifest files".white().dimmed(),
+                err.to_string().cyan().bold(),
+            );
+        }
+        None => {
+            println!(
+                "{} {}",
+                &*WARNING,
+                "failed to git commit metl manifest files".white().dimmed(),
+            );
+        }
+    }
+}
+
+pub fn warn_metl_manifest_commit_code(code: i32) {
+    println!(
+        "{} {} {}",
+        &*WARNING,
+        "failed to git commit metl manifest files, code:"
+            .white()
+            .dimmed(),
+        code.to_string().cyan().bold(),
+    );
+}
+
+pub fn warn_git_push_metl_manifest_failed(error: Option<std::io::Error>, code: Option<i32>) {
+    match (error, code) {
+        (None, None) => {
+            println!(
+                "{} {}",
+                &*WARNING,
+                "failed to git push metl manifest files, code:"
+                    .white()
+                    .dimmed(),
+            );
+        }
+        (None, Some(code)) => {
+            println!(
+                "{} {} {}",
+                &*WARNING,
+                "failed to git push metl manifest files, code:"
+                    .white()
+                    .dimmed(),
+                code.to_string().cyan(),
+            );
+        }
+        (Some(error), None) => {
+            println!(
+                "{} {} {}",
+                &*WARNING,
+                "failed to git push metl manifest files, error:"
+                    .white()
+                    .dimmed(),
+                error.to_string().cyan(),
+            );
+        }
+        (Some(error), Some(code)) => {
+            println!(
+                "{} {} {}\n{}",
+                &*WARNING,
+                "failed to git push metl manifest files, code:"
+                    .white()
+                    .dimmed(),
+                code.to_string().cyan(),
+                error.to_string().cyan(),
+            );
+        }
+    }
 }

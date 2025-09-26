@@ -2,7 +2,7 @@ use std::{ffi::OsString, path::PathBuf, process::Output, sync::LazyLock};
 
 use colored::{ColoredString, Colorize};
 
-use crate::manifest::PackageManager;
+use crate::{config::load_config, manifest::PackageManager};
 
 static SUCCESS: LazyLock<ColoredString> = LazyLock::new(|| "[SUCCESS]".green().bold());
 
@@ -104,30 +104,54 @@ pub fn pacman_dry_run_header() {
     );
 }
 
-pub fn install_successful(installed: &str) {
+pub fn install_successful(package_manager: &PackageManager, installed: &str) {
     println!(
-        "{} {} {}",
+        "{} {} {} {}",
         &*SUCCESS,
-        "Installed:".white().dimmed(),
-        installed.white().bold(),
+        "Installed with:".white().dimmed(),
+        package_manager.to_string().white().bold(),
+        installed.cyan(),
     );
 }
 
-pub fn remove_successful(installed: &str) {
+pub fn remove_successful(package_manager: &PackageManager, installed: &str) {
     println!(
-        "{} {} {}",
+        "{} {} {} {}",
         &*SUCCESS,
         "Removed:".white().dimmed(),
-        installed.white().bold(),
+        package_manager.to_string().white().bold(),
+        installed.white().cyan(),
     );
 }
 
-pub fn package_install_success(manager: PackageManager, package: &str) {
+pub fn package_update_success(manager: &PackageManager, package: &str) {
     println!(
         "{} {} {} {}",
         &*SUCCESS,
         manager.to_string().white().bold(),
-        "installed:".white().dimmed(),
+        "updated:".white().dimmed(),
         package.white().bold(),
+    );
+}
+
+pub fn git_metl_manifest_commit_success(proxied_command: &str) {
+    let config = load_config();
+
+    println!(
+        "{} {} {} {}",
+        &*SUCCESS,
+        "metl manifest files committed after command: "
+            .white()
+            .dimmed(),
+        config.package_manager.to_string().white().bold(),
+        proxied_command.cyan(),
+    );
+}
+
+pub fn git_push_metl_manifest_success() {
+    println!(
+        "{} {}",
+        &*SUCCESS,
+        "metl manifest files pushed to remote git".white().dimmed(),
     );
 }

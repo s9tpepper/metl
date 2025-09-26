@@ -7,7 +7,16 @@ use crate::{manifest::PackageManager, sync::RestoreError};
 
 static ERROR: LazyLock<ColoredString> = LazyLock::new(|| "[ERROR]".red().bold());
 
-pub fn unsupported_package_manager(package_manager: PackageManager) -> ! {
+pub fn missing_metl_config(metl_config_path: PathBuf) -> ! {
+    panic!(
+        "{} {} {}",
+        &*ERROR,
+        "Can not find metl config toml at".white().dimmed(),
+        metl_config_path.to_string_lossy().white().bold()
+    );
+}
+
+pub fn unsupported_package_manager(package_manager: &PackageManager) -> ! {
     panic!(
         "{} {} {}",
         &*ERROR,
@@ -108,22 +117,24 @@ pub fn package_install_failed(package: &str, error: std::io::Error) -> ! {
     );
 }
 
-pub fn install_failed(installed: &str, code: i32) {
+pub fn install_failed(package_manager: &PackageManager, installed: &str, code: i32) {
     println!(
-        "{} {} {}, code: {}",
+        "{} {} {} {}, code: {}",
         &*ERROR,
         "failed to install:".white().dimmed(),
-        installed.white().bold(),
+        package_manager.to_string().white().bold(),
+        installed.cyan(),
         code.to_string().cyan().bold(),
     );
 }
 
-pub fn remove_failed(installed: &str, code: i32) {
+pub fn remove_failed(package_manager: &PackageManager, installed: &str, code: i32) {
     println!(
-        "{} {} {}, code: {}",
+        "{} {} {} {}, code: {}",
         &*ERROR,
         "failed to remove:".white().dimmed(),
-        installed.white().bold(),
+        package_manager.to_string().white().bold(),
+        installed.cyan(),
         code.to_string().cyan().bold(),
     );
 }

@@ -16,12 +16,12 @@ use crate::{
         load_manifest,
     },
     successes::{
-        dotfiles_copied_successfully, dry_run_dotfiles_clone, package_install_success,
-        package_sync_success, pacman_dry_run_header, stow_success,
+        dotfiles_copied_successfully, dry_run_dotfiles_clone, package_sync_success,
+        package_update_success, pacman_dry_run_header, stow_success,
     },
     warnings::{
-        dotfiles_copy_failed, dotfiles_repo_not_set, warn_dotfiles_symlink_failed,
-        warn_dotfiles_symlink_non_zero, warn_dotfiles_symlink_signal_exit, warn_failed_installs,
+        dotfiles_copy_failed, warn_dotfiles_symlink_failed, warn_dotfiles_symlink_non_zero,
+        warn_dotfiles_symlink_signal_exit, warn_failed_installs,
     },
 };
 
@@ -47,9 +47,7 @@ pub fn check_prereqs(config: &Config) {
     check_if_available(&config.package_manager.to_string(), &mut missing);
     check_if_available("git", &mut missing);
 
-    if let Some(symlink) = config.dotfiles_symlink
-        && symlink
-    {
+    if config.dotfiles_symlink {
         check_if_available("stow", &mut missing);
     } else {
         check_if_available("rsync", &mut missing);
@@ -78,20 +76,11 @@ pub fn check_if_available(cli_tool: &str, missing: &mut Vec<String>) {
         println!("command code 127");
         missing.push(cli_tool.to_string());
     }
-
-    println!("code: {code}");
 }
 
 fn restore_dotfiles(config: &Config, dry_run: bool, verbose: bool) {
-    let Some(repo) = &config.dotfiles_repo else {
-        dotfiles_repo_not_set();
-        return;
-    };
-
-    let symlink = config.dotfiles_symlink.unwrap_or(false);
-
-    match clone_dotfiles(repo, dry_run, verbose) {
-        Ok(_) => install_dotfiles(symlink, verbose, dry_run),
+    match clone_dotfiles(&config.dotfiles_repo, dry_run, verbose) {
+        Ok(_) => install_dotfiles(config.dotfiles_symlink, verbose, dry_run),
         Err(error) => dotfiles_clone_error(error, verbose),
     }
 }
@@ -339,7 +328,8 @@ fn install_arch_packages(
 
     let mut install_errors: Vec<(&String, Option<std::io::Error>)> = vec![];
     package_list.iter().for_each(|package| {
-        let mut command = Command::new(manager.to_string());
+        let mut command = Command::new("sudo");
+        command.arg(manager.to_string());
         command.arg("-S");
         command.arg("--needed");
         command.arg("--noconfirm");
@@ -356,7 +346,11 @@ fn install_arch_packages(
 
         command.arg(package);
 
-        command.stdout(Stdio::piped());
+        // NOTE: inherit so we can capture sudo password input
+        command.stdin(Stdio::inherit());
+        command.stdout(Stdio::inherit());
+        command.stderr(Stdio::inherit());
+
         let command_result = match command.output() {
             Ok(result) => result,
             Err(error) => {
@@ -383,7 +377,7 @@ fn install_arch_packages(
         if let Some(code) = command_result.status.code()
             && code == 0
         {
-            package_install_success(manager.clone(), package);
+            package_update_success(&manager, package);
         } else {
             install_errors.push((package, None));
         }
